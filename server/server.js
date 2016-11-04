@@ -6,30 +6,47 @@ var express = require('express'),
 	bodyParser = require('body-parser'),
 	fs = require('fs'),
 	path = require('path'),
-	_ = require('lodash');
+	_ = require('lodash'),
+	logger = require('morgan'),
+	flash = require('connect-flash'),
+	cookieParser = require('cookie-parser'),
+	session = require('express-session'),
+	RedisStore = require('connect-redis')(session);
 
 var passport = require('passport'),
 	Strategy = require('passport-local').Strategy;
 
 var userDb = require('../database/user');
 
-//app.use(require('morgan')('combined'));
+app.use(logger('dev'));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(cookieParser());
+app.use(session({store: new RedisStore({
+	host: '127.0.0.1',
+	port: 6379
+}), secret: 'kitty-kat-meow', key: 'express.sid', resave: false, saveUninitialized: true}));
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+app.use(flash());
 
 passport.use(new Strategy(
   function(email, password, cb) {
   	console.log({email: email})
+  	console.log({password: password})
     userDb.findByEmail(email, function(err, user) {
-    	console.log(err)
-      if (err) { return cb(err); }
-      if (!user) { return cb(null, false); }
-      if (user.password !== password) { return cb(null, false); }
-      console.log({user:user})
+      if (err) {console.log({err: err}); return cb(err); }
+      if (!user) { console.log({user2: user}); return cb(null, false); }
+      if (user.password !== password) {console.log({user: user}); return cb(null, false); }
+      console.log({user1:user})
       return cb(null, user);
     });
   }));
 
 passport.serializeUser(function(user, cb) {
-  cb(null, user.id);
+  cb(null, user.user_id);
 });
 
 passport.deserializeUser(function(id, cb) {
@@ -39,18 +56,14 @@ passport.deserializeUser(function(id, cb) {
 	})
 });
 
-console.log('something')
-
-app.use(passport.initialize());
-app.use(passport.session());
-
 app.set('views' ,'./views');
 
 app.set('view engine', 'pug');
 
 app.get('/',
   function(req, res) {
-    res.render('home', { user: req.user });
+  	console.log({requestUser: req.user})
+    res.render('home', { user: req.user});
   });
 
 app.get('/login',
@@ -59,11 +72,13 @@ app.get('/login',
   });
   
 app.post('/login', 
-  passport.authenticate('local', { failureRedirect: '/login'}),
-  function(req, res) {
-  	console.log({requestBody:req.user})
-    res.redirect('/');
-  });
+  passport.authenticate('local', { successRedirect: '/', failureRedirect: '/login', failureFlash: 'Invalid credentials' }),
+  // function(req, res) {
+  // 	console.log({requestBody:req.user})
+  //   res.redirect('/');
+  // });
+  function(){console.log('after login')}
+);
   
 app.get('/logout',
   function(req, res){

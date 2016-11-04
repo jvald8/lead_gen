@@ -2,5 +2,5 @@ if !user
 	p= "Welcome!"
 	a(href="/login")= "Please login"
 else
-	p= "Hello " + user.firstname + ". View your profile"
+	p= "Hello " + user[0].first_name + ". View your profile"
 	a(href="/profile")= "Profile"

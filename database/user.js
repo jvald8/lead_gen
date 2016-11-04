@@ -36,15 +36,16 @@ exports.findById = function(id, cb) {
 }
 
 exports.findByEmail = function(email, cb) {
-	console.log(email)
+	console.log({email: email})
 
   process.nextTick(function() {
 
   	pool.getConnection(function(err, connection) {
-  		connection.query(`SELECT * FROM users WHERE email=${email}`, function(err, rows, fields) {
-  			console.log(err)
-  			if(rows.email === email) {
-  				return cb(null, record);
+  		connection.query(`SELECT * FROM users WHERE email='${email}'`, function(err, rows, fields) {
+  			console.log({err: err})
+  			console.log({rows: rows[0]})
+  			if(rows[0].email === email) {
+  				return cb(null, rows[0]);
   			}
   			return cb(null, null);
   		})
